@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CutFlow</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <div class="brand-lockup">
+          <img src="/static/logo-cutflow.svg" alt="CutFlow logo" class="brand-logo">
+          <p class="eyebrow">CutFlow</p>
+        </div>
+        <h1>Turn one long video into clean, ready-to-export slices.</h1>
+        <p class="hero-text">
+          Upload one source video, choose how many files you want, generate equal slices,
+          rename them, and cut with live studio-style progress.
+        </p>
+      </div>
+      <aside class="hero-panel">
+        <div class="mini-stat">
+          <span class="mini-label">Flow</span>
+          <strong>Upload -> Inspect -> Slice -> Cut</strong>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-label">Mode</span>
+          <strong>One uploaded video at a time</strong>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-label">Editing</span>
+          <strong>Rename slices only</strong>
+        </div>
+      </aside>
+    </header>
+
+    <main class="workspace">
+      <section class="journey-card">
+        <div class="section-head">
+          <span class="section-index">01</span>
+          <div>
+            <h2>Upload Video</h2>
+            <p>Start by selecting one local video file.</p>
+          </div>
+        </div>
+
+        <label class="upload-tile studio-upload">
+          <span class="tile-title">Choose Local Video</span>
+          <span class="tile-copy">Upload one source file. After upload, the app will show duration and file size only.</span>
+          <input type="file" id="file-upload" accept="video/mp4,video/*" hidden>
+        </label>
+
+        <div id="upload-status" class="status-banner"></div>
+
+        <div id="video-meta" class="source-summary" style="display:none">
+          <div class="summary-card">
+            <span class="summary-label">File Name</span>
+            <strong id="meta-filename">-</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Duration</span>
+            <strong id="meta-duration">00:00:00</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">File Size</span>
+            <strong id="meta-size">0 MB</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="journey-card">
+        <div class="section-head">
+          <span class="section-index">02</span>
+          <div>
+            <h2>Generate Slices</h2>
+            <p>Enter how many output files you want, then generate equal time slices from the full video.</p>
+          </div>
+        </div>
+
+        <div class="generator-bar">
+          <div class="count-panel">
+            <label for="slice-count">Number of output files</label>
+            <input type="number" id="slice-count" min="1" step="1" value="3">
+          </div>
+          <button id="generate-btn" class="btn-secondary" type="button">Generate Slices</button>
+        </div>
+
+        <div id="plan-summary" class="review-copy plan-summary">
+          Upload a video first, then generate slices.
+        </div>
+      </section>
+
+      <section class="journey-card">
+        <div class="section-head">
+          <span class="section-index">03</span>
+          <div>
+            <h2>Review Slice List</h2>
+            <p>Times are generated automatically. You can rename each slice before cutting.</p>
+          </div>
+        </div>
+
+        <div class="segment-board">
+          <div class="seg-header">
+            <span>Slice Name</span>
+            <span>Start</span>
+            <span>End</span>
+          </div>
+          <div id="segments-container" class="segments-container empty-state">
+            No slices generated yet.
+          </div>
+        </div>
+      </section>
+
+      <section class="journey-card">
+        <div class="section-head">
+          <span class="section-index">04</span>
+          <div>
+            <h2>Cut Progress</h2>
+            <p>Monitor the current slice and the overall job while FFmpeg runs.</p>
+          </div>
+        </div>
+
+        <div class="review-grid">
+          <div class="review-panel">
+            <span class="review-label">Current Slice</span>
+            <div id="current-slice-name" class="review-copy">No active slice.</div>
+            <div class="progress-shell">
+              <div class="progress-track">
+                <div id="slice-progress-bar" class="progress-bar slice-progress"></div>
+              </div>
+              <div class="progress-meta">
+                <span>This slice</span>
+                <strong id="slice-progress-percent">0%</strong>
+              </div>
+            </div>
+          </div>
+          <div class="review-panel">
+            <span class="review-label">Overall Job</span>
+            <div id="progress-label" class="review-copy">Waiting to start.</div>
+            <div class="progress-shell">
+              <div class="progress-track">
+                <div id="progress-bar" class="progress-bar"></div>
+              </div>
+              <div class="progress-meta">
+                <span>Total progress</span>
+                <strong id="progress-percent">0%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="launch-bar">
+          <button id="cut-btn" class="btn-primary" type="button">Cut Video</button>
+          <p class="launch-note">The generated slice list is the cut plan. Change names if you want, then start.</p>
+        </div>
+      </section>
+
+      <div id="cut-results" class="results-stack"></div>
+
+      <section id="output-section" class="journey-card output-card" style="display:none">
+        <div class="section-head compact">
+          <span class="section-index">05</span>
+          <div>
+            <h2>Output Files</h2>
+            <p>Download each exported slice when the job is complete.</p>
+          </div>
+          <button id="clear-btn" class="btn-danger" type="button">Delete All</button>
+        </div>
+        <div id="output-list" class="output-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
