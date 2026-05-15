@@ -1,182 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CutFlow</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>CutFlow - Local Video Tools</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-  <div class="page-shell">
-    <header class="hero">
-      <div class="hero-copy">
-        <div class="brand-lockup">
-          <img src="/static/logo-cutflow.svg" alt="CutFlow logo" class="brand-logo">
-          <p class="eyebrow">CutFlow</p>
+<body class="min-h-screen bg-neutral-950 text-neutral-100">
+  <header class="sticky top-0 z-50 w-full border-b border-white/10 bg-neutral-950/85 backdrop-blur">
+    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <a class="flex items-center gap-x-3 text-xl font-bold tracking-tight text-white" href="{{ url_for('index') }}" aria-label="CutFlow">
+        <span class="inline-flex size-10 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10.5 21 4"/><path d="m14.5 13.5 6.5 6.5"/><path d="M8 12h6"/><circle cx="5" cy="8" r="3"/><circle cx="5" cy="16" r="3"/></svg>
+        </span>
+        CutFlow
+      </a>
+
+      <button type="button" class="hs-collapse-toggle inline-flex size-10 items-center justify-center rounded-lg border border-white/10 text-sm font-semibold text-neutral-200 hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50 sm:hidden" data-hs-collapse="#main-navbar" aria-controls="main-navbar" aria-label="Toggle navigation">
+        <svg class="hs-collapse-open:hidden size-5" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
+        <svg class="hs-collapse-open:block hidden size-5" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+      </button>
+
+      <div id="main-navbar" class="hs-collapse hidden grow basis-full overflow-hidden transition-all duration-300 sm:block">
+        <div class="mt-5 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:items-center sm:justify-end sm:gap-1 sm:ps-5">
+          <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white" href="{{ url_for('cut_video_page') }}">Cut Video</a>
+          <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white" href="{{ url_for('compress_video_page') }}">Compress Video</a>
+          <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-400 hover:bg-white/10 hover:text-white" href="#local">Local-first</a>
         </div>
-        <h1>Turn one long video into clean, ready-to-export slices.</h1>
-        <p class="hero-text">
-          Upload one source video, choose how many files you want, generate equal slices,
-          rename them, and cut with live studio-style progress.
-        </p>
       </div>
-      <aside class="hero-panel">
-        <div class="mini-stat">
-          <span class="mini-label">Flow</span>
-          <strong>Upload -> Inspect -> Slice -> Cut</strong>
-        </div>
-        <div class="mini-stat">
-          <span class="mini-label">Mode</span>
-          <strong>One uploaded video at a time</strong>
-        </div>
-        <div class="mini-stat">
-          <span class="mini-label">Editing</span>
-          <strong>Rename slices only</strong>
-        </div>
-      </aside>
-    </header>
+    </nav>
+  </header>
 
-    <main class="workspace">
-      <section class="journey-card">
-        <div class="section-head">
-          <span class="section-index">01</span>
-          <div>
-            <h2>Upload Video</h2>
-            <p>Start by selecting one local video file.</p>
-          </div>
+  <main>
+    <section class="relative overflow-hidden">
+      <div class="absolute left-1/2 top-0 -z-10 size-[36rem] -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl"></div>
+      <div class="mx-auto max-w-[85rem] px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+        <div class="mx-auto max-w-4xl text-center">
+          <span class="inline-flex items-center gap-x-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">Local FFmpeg Toolkit</span>
+          <h1 class="mt-6 text-4xl font-bold tracking-tight text-white sm:text-6xl">Every local video tool in one focused workspace</h1>
+          <p class="mx-auto mt-5 max-w-2xl text-lg text-neutral-300">Cut large files into controlled clips, compress video size, and keep everything on your machine.</p>
         </div>
 
-        <label class="upload-tile studio-upload">
-          <span class="tile-title">Choose Local Video</span>
-          <span class="tile-copy">Upload one source file. After upload, the app will show duration and file size only.</span>
-          <input type="file" id="file-upload" accept="video/mp4,video/*" hidden>
-        </label>
-
-        <div id="upload-status" class="status-banner"></div>
-
-        <div id="video-meta" class="source-summary" style="display:none">
-          <div class="summary-card">
-            <span class="summary-label">File Name</span>
-            <strong id="meta-filename">-</strong>
-          </div>
-          <div class="summary-card">
-            <span class="summary-label">Duration</span>
-            <strong id="meta-duration">00:00:00</strong>
-          </div>
-          <div class="summary-card">
-            <span class="summary-label">File Size</span>
-            <strong id="meta-size">0 MB</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="journey-card">
-        <div class="section-head">
-          <span class="section-index">02</span>
-          <div>
-            <h2>Generate Slices</h2>
-            <p>Enter how many output files you want, then generate equal time slices from the full video.</p>
-          </div>
-        </div>
-
-        <div class="generator-bar">
-          <div class="count-panel">
-            <label for="slice-count">Number of output files</label>
-            <input type="number" id="slice-count" min="1" step="1" value="3">
-          </div>
-          <button id="generate-btn" class="btn-secondary" type="button">Generate Slices</button>
-        </div>
-
-        <div id="plan-summary" class="review-copy plan-summary">
-          Upload a video first, then generate slices.
-        </div>
-      </section>
-
-      <section class="journey-card">
-        <div class="section-head">
-          <span class="section-index">03</span>
-          <div>
-            <h2>Review Slice List</h2>
-            <p>Times are generated automatically. You can rename each slice before cutting.</p>
-          </div>
-        </div>
-
-        <div class="segment-board">
-          <div class="seg-header">
-            <span>Slice Name</span>
-            <span>Start</span>
-            <span>End</span>
-          </div>
-          <div id="segments-container" class="segments-container empty-state">
-            No slices generated yet.
-          </div>
-        </div>
-      </section>
-
-      <section class="journey-card">
-        <div class="section-head">
-          <span class="section-index">04</span>
-          <div>
-            <h2>Cut Progress</h2>
-            <p>Monitor the current slice and the overall job while FFmpeg runs.</p>
-          </div>
-        </div>
-
-        <div class="review-grid">
-          <div class="review-panel">
-            <span class="review-label">Current Slice</span>
-            <div id="current-slice-name" class="review-copy">No active slice.</div>
-            <div class="progress-shell">
-              <div class="progress-track">
-                <div id="slice-progress-bar" class="progress-bar slice-progress"></div>
-              </div>
-              <div class="progress-meta">
-                <span>This slice</span>
-                <strong id="slice-progress-percent">0%</strong>
-              </div>
+        <div class="mt-12 grid gap-5 sm:grid-cols-2">
+          <a href="{{ url_for('cut_video_page') }}" class="group flex min-h-72 flex-col rounded-3xl border border-white/10 bg-neutral-900/80 p-7 shadow-2xl shadow-black/30 transition hover:-translate-y-1 hover:border-blue-400/60 hover:bg-neutral-900">
+            <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
+              <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10.5 21 4"/><path d="m14.5 13.5 6.5 6.5"/><path d="M8 12h6"/><circle cx="5" cy="8" r="3"/><circle cx="5" cy="16" r="3"/></svg>
+            </span>
+            <h2 class="mt-8 text-2xl font-bold text-white">Cut Video</h2>
+            <p class="mt-3 text-sm leading-6 text-neutral-400">Split one video by number of files, duration, or custom segments. Designed for predictable local batches.</p>
+            <div class="mt-auto flex items-center gap-x-2 pt-8 text-sm font-semibold text-blue-300">
+              Open cutter
+              <svg class="size-4 transition group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-          </div>
-          <div class="review-panel">
-            <span class="review-label">Overall Job</span>
-            <div id="progress-label" class="review-copy">Waiting to start.</div>
-            <div class="progress-shell">
-              <div class="progress-track">
-                <div id="progress-bar" class="progress-bar"></div>
-              </div>
-              <div class="progress-meta">
-                <span>Total progress</span>
-                <strong id="progress-percent">0%</strong>
-              </div>
+          </a>
+
+          <a href="{{ url_for('compress_video_page') }}" class="group flex min-h-72 flex-col rounded-3xl border border-white/10 bg-neutral-900/80 p-7 shadow-2xl shadow-black/30 transition hover:-translate-y-1 hover:border-emerald-400/60 hover:bg-neutral-900">
+            <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+              <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="m14 10 6-6"/><path d="m10 14-6 6"/></svg>
+            </span>
+            <h2 class="mt-8 text-2xl font-bold text-white">Compress Video</h2>
+            <p class="mt-3 text-sm leading-6 text-neutral-400">Reduce file size with quality presets, CRF control, optional downscale, and web-ready MP4 output.</p>
+            <div class="mt-auto flex items-center gap-x-2 pt-8 text-sm font-semibold text-emerald-300">
+              Open compressor
+              <svg class="size-4 transition group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-          </div>
+          </a>
         </div>
+      </div>
+    </section>
 
-        <div class="launch-bar">
-          <button id="cut-btn" class="btn-primary" type="button">Cut Video</button>
-          <p class="launch-note">The generated slice list is the cut plan. Change names if you want, then start.</p>
+    <section id="local" class="border-t border-white/10 bg-neutral-950/70">
+      <div class="mx-auto grid max-w-[85rem] gap-4 px-4 py-10 sm:grid-cols-3 sm:px-6 lg:px-8">
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <h3 class="font-semibold text-white">Local files stay local</h3>
+          <p class="mt-2 text-sm text-neutral-400">Uploads and outputs are written to local folders in this project.</p>
         </div>
-      </section>
-
-      <div id="cut-results" class="results-stack"></div>
-
-      <section id="output-section" class="journey-card output-card" style="display:none">
-        <div class="section-head compact">
-          <span class="section-index">05</span>
-          <div>
-            <h2>Output Files</h2>
-            <p>Download each exported slice when the job is complete.</p>
-          </div>
-          <button id="clear-btn" class="btn-danger" type="button">Delete All</button>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <h3 class="font-semibold text-white">FFmpeg powered</h3>
+          <p class="mt-2 text-sm text-neutral-400">The app uses your local FFmpeg install for actual media processing.</p>
         </div>
-        <div id="output-list" class="output-grid"></div>
-      </section>
-    </main>
-  </div>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <h3 class="font-semibold text-white">Separate tool pages</h3>
+          <p class="mt-2 text-sm text-neutral-400">Each tool has its own focused workflow instead of one overloaded page.</p>
+        </div>
+      </div>
+    </section>
+  </main>
 
-  <script src="/static/script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
 </body>
 </html>

@@ -20,6 +20,9 @@ def check_ffmpeg():
 
 TIME_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}$")
 PROGRESS_TIME_PATTERN = re.compile(r"out_time_ms=(\d+)")
+DEFAULT_COMPRESS_CRF = 28
+MIN_COMPRESS_CRF = 18
+MAX_COMPRESS_CRF = 35
 
 
 @dataclass
@@ -228,6 +231,79 @@ def cut_segment(
 
     if progress_callback:
         progress_callback(100.0, "Completed")
+
+    return {"success": True, "output_file": os.path.basename(output_path), "stderr": stderr}
+
+
+def validate_compression_crf(value: int) -> int:
+    try:
+        crf = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("Compression level must be a whole number.")
+    if crf < MIN_COMPRESS_CRF or crf > MAX_COMPRESS_CRF:
+        raise ValueError(
+            f"Compression level must be between {MIN_COMPRESS_CRF} and {MAX_COMPRESS_CRF}."
+        )
+    return crf
+
+
+def compress_video(
+    input_path: str,
+    output_path: str,
+    duration_seconds: float,
+    crf: int = DEFAULT_COMPRESS_CRF,
+    progress_callback: Optional[Callable[[float, str], None]] = None,
+) -> dict:
+    if not os.path.exists(input_path):
+        return {"success": False, "output_file": None, "stderr": f"Input file not found: {input_path}"}
+
+    try:
+        crf = validate_compression_crf(crf)
+    except ValueError as exc:
+        return {"success": False, "output_file": None, "stderr": str(exc)}
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    cmd = [
+        "ffmpeg", "-y", "-loglevel", "error", "-i", input_path,
+        "-map", "0:v:0", "-map", "0:a?", "-sn",
+        "-c:v", "libx264", "-crf", str(crf), "-preset", "medium",
+        "-c:a", "aac", "-b:a", "128k",
+        "-movflags", "+faststart",
+        "-progress", "pipe:1",
+        "-nostats",
+        output_path,
+    ]
+
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError:
+        return {"success": False, "output_file": None, "stderr": "FFmpeg not found. Install with: winget install Gyan.FFmpeg"}
+
+    try:
+        assert process.stdout is not None
+        for line in process.stdout:
+            match = PROGRESS_TIME_PATTERN.search(line.strip())
+            if match and progress_callback:
+                out_time_seconds = int(match.group(1)) / 1_000_000
+                percent = min(100.0, (out_time_seconds / max(duration_seconds, 1)) * 100)
+                progress_callback(percent, f"Compressing {seconds_to_timecode(out_time_seconds)} / {seconds_to_timecode(duration_seconds)}")
+        _, stderr = process.communicate(timeout=300)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        _, stderr = process.communicate()
+        return {"success": False, "output_file": None, "stderr": "FFmpeg timed out after 5 minutes"}
+
+    if process.returncode != 0:
+        return {"success": False, "output_file": None, "stderr": stderr}
+
+    if progress_callback:
+        progress_callback(100.0, "Compression completed")
 
     return {"success": True, "output_file": os.path.basename(output_path), "stderr": stderr}
 
