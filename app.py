@@ -480,6 +480,8 @@ def open_output_folder():
     try:
         if hasattr(os, "startfile"):
             os.startfile(OUTPUT_DIR)  # type: ignore[attr-defined]
+        elif shutil.which("open"):
+            subprocess.Popen(["open", OUTPUT_DIR])
         elif os.name == "posix":
             subprocess.Popen(["xdg-open", OUTPUT_DIR])
         else:
@@ -516,4 +518,5 @@ if __name__ == "__main__":
         cutter.check_ffmpeg()
     except EnvironmentError as e:
         print(f"WARNING: {e}")
-    app.run(debug=True, port=5000, use_reloader=False)
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(debug=True, port=port, use_reloader=False)
