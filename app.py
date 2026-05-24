@@ -28,9 +28,13 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 JOBS: dict[str, dict] = {}
+JOB_PAYLOADS: dict[str, dict] = {}
+JOB_QUEUE: list[str] = []
 JOB_HISTORY: list[dict] = []
 MAX_HISTORY_ITEMS = 12
 JOB_LOCK = threading.Lock()
+QUEUE_CONDITION = threading.Condition(JOB_LOCK)
+QUEUE_WORKER_STARTED = False
 
 
 def _metadata_to_dict(metadata: cutter.VideoMetadata) -> dict:
@@ -62,6 +66,94 @@ def _append_history(item: dict) -> None:
         },
     )
     del JOB_HISTORY[MAX_HISTORY_ITEMS:]
+
+
+def _now_display() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _refresh_queue_positions_locked() -> None:
+    for position, queued_job_id in enumerate(JOB_QUEUE, start=1):
+        if queued_job_id in JOBS:
+            JOBS[queued_job_id]["queue_position"] = position
+
+
+def _enqueue_job(job_id: str, payload: dict) -> None:
+    global QUEUE_WORKER_STARTED
+    with QUEUE_CONDITION:
+        JOB_PAYLOADS[job_id] = payload
+        JOB_QUEUE.append(job_id)
+        _refresh_queue_positions_locked()
+        if not QUEUE_WORKER_STARTED:
+            worker = threading.Thread(target=_queue_worker, daemon=True)
+            worker.start()
+            QUEUE_WORKER_STARTED = True
+        QUEUE_CONDITION.notify()
+
+
+def _queue_worker() -> None:
+    while True:
+        with QUEUE_CONDITION:
+            while not JOB_QUEUE:
+                QUEUE_CONDITION.wait()
+            job_id = JOB_QUEUE.pop(0)
+            _refresh_queue_positions_locked()
+            job = JOBS.get(job_id)
+            payload = JOB_PAYLOADS.get(job_id)
+            if not job or not payload:
+                continue
+            job["status"] = "running"
+            job["queue_position"] = 0
+            job["started_at"] = _now_display()
+            job["message"] = "Starting"
+
+        try:
+            if payload["type"] == "cut":
+                _run_cut_job(job_id, payload["flat_parts"])
+            elif payload["type"] == "compress":
+                _run_compress_job(job_id, payload["metadata"])
+        except Exception as exc:
+            with JOB_LOCK:
+                failed_job = JOBS.get(job_id)
+                if failed_job:
+                    failed_job["status"] = "failed"
+                    failed_job["message"] = str(exc)
+                    failed_job["completed_at"] = _now_display()
+        finally:
+            with JOB_LOCK:
+                JOB_PAYLOADS.pop(job_id, None)
+
+
+def _public_job(job: dict) -> dict:
+    output_files = list(job.get("created_files") or [])
+    output_size_bytes = job.get("output_size_bytes")
+    if output_size_bytes is None and output_files:
+        output_size_bytes = sum(
+            _safe_size(os.path.join(OUTPUT_DIR, name)) for name in output_files
+        )
+    return {
+        "job_id": job.get("job_id"),
+        "type": job.get("type"),
+        "tool_label": job.get("tool_label"),
+        "source_file": job.get("source_file") or os.path.basename(job.get("input_path", "")),
+        "status": job.get("status"),
+        "message": job.get("message"),
+        "progress_percent": job.get("progress_percent", 0),
+        "queue_position": job.get("queue_position", 0),
+        "created_at": job.get("created_at"),
+        "started_at": job.get("started_at"),
+        "completed_at": job.get("completed_at"),
+        "current_segment_name": job.get("current_segment_name"),
+        "current_slice_percent": job.get("current_slice_percent", 0),
+        "current_slice_index": job.get("current_slice_index", 0),
+        "completed_parts": job.get("completed_parts", 0),
+        "total_parts": job.get("total_parts", 0),
+        "source_size_bytes": job.get("source_size_bytes"),
+        "output_size_bytes": output_size_bytes,
+        "output_files": output_files,
+        "result": job.get("result"),
+        "results": job.get("results", []),
+    }
 
 
 def _delete_files_in_dir(folder: str, extensions: tuple[str, ...] | None = None) -> dict:
@@ -106,10 +198,16 @@ def _create_job(input_path: str, planned_segments: list[dict]) -> str:
         JOBS[job_id] = {
             "job_id": job_id,
             "type": "cut",
+            "tool_label": "Cut Video",
+            "source_file": os.path.basename(input_path),
             "input_path": input_path,
             "status": "queued",
             "message": "Queued",
             "progress_percent": 0.0,
+            "queue_position": 0,
+            "created_at": _now_display(),
+            "started_at": None,
+            "completed_at": None,
             "current_segment_name": None,
             "current_slice_percent": 0.0,
             "current_slice_index": 0,
@@ -120,12 +218,7 @@ def _create_job(input_path: str, planned_segments: list[dict]) -> str:
             "created_files": [],
         }
 
-    worker = threading.Thread(
-        target=_run_cut_job,
-        args=(job_id, flat_parts),
-        daemon=True,
-    )
-    worker.start()
+    _enqueue_job(job_id, {"type": "cut", "flat_parts": flat_parts})
     return job_id
 
 
@@ -136,10 +229,16 @@ def _create_compress_job(input_path: str, crf: int) -> str:
         JOBS[job_id] = {
             "job_id": job_id,
             "type": "compress",
+            "tool_label": "Compress Video",
+            "source_file": os.path.basename(input_path),
             "input_path": input_path,
             "status": "queued",
             "message": "Queued",
             "progress_percent": 0.0,
+            "queue_position": 0,
+            "created_at": _now_display(),
+            "started_at": None,
+            "completed_at": None,
             "result": None,
             "created_files": [],
             "source_size_bytes": metadata.size_bytes,
@@ -147,12 +246,7 @@ def _create_compress_job(input_path: str, crf: int) -> str:
             "crf": crf,
         }
 
-    worker = threading.Thread(
-        target=_run_compress_job,
-        args=(job_id, metadata),
-        daemon=True,
-    )
-    worker.start()
+    _enqueue_job(job_id, {"type": "compress", "metadata": metadata})
     return job_id
 
 
@@ -213,6 +307,7 @@ def _run_cut_job(job_id: str, flat_parts: list[dict]) -> None:
                 current_job["status"] = "failed"
                 current_job["message"] = result.get("stderr") or f"Failed while cutting {part['name']}"
                 current_job["current_segment_name"] = part["name"]
+                current_job["completed_at"] = _now_display()
                 return
 
     with JOB_LOCK:
@@ -224,6 +319,7 @@ def _run_cut_job(job_id: str, flat_parts: list[dict]) -> None:
         job["current_segment_name"] = None
         job["progress_percent"] = 100.0
         job["current_slice_percent"] = 100.0
+        job["completed_at"] = _now_display()
         _append_history(
             {
                 "type": "cut",
@@ -281,6 +377,7 @@ def _run_compress_job(job_id: str, metadata: cutter.VideoMetadata) -> None:
             job["status"] = "completed"
             job["message"] = "Compression completed"
             job["progress_percent"] = 100.0
+            job["completed_at"] = _now_display()
             _append_history(
                 {
                     "type": "compress",
@@ -296,6 +393,7 @@ def _run_compress_job(job_id: str, metadata: cutter.VideoMetadata) -> None:
         else:
             job["status"] = "failed"
             job["message"] = result.get("stderr") or "Compression failed"
+            job["completed_at"] = _now_display()
 
 
 @app.route("/")
@@ -453,6 +551,22 @@ def compress_status(job_id):
         payload = dict(job)
 
     return jsonify(payload)
+
+
+@app.route("/jobs")
+def jobs():
+    with JOB_LOCK:
+        jobs_list = [_public_job(job) for job in JOBS.values()]
+
+    status_order = {"running": 0, "queued": 1, "failed": 2, "completed": 3}
+    jobs_list.sort(
+        key=lambda job: (
+            status_order.get(job["status"], 4),
+            job.get("queue_position") or 0,
+            job.get("created_at") or "",
+        )
+    )
+    return jsonify(jobs_list)
 
 
 @app.route("/outputs")

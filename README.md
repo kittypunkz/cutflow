@@ -48,6 +48,16 @@ winget install Gyan.FFmpeg
 
 ## Installation
 
+For non-technical Windows users, double-click:
+
+```text
+setup_and_start.bat
+```
+
+It checks for Python, creates the local `.venv`, installs `requirements.txt`, checks FFmpeg/FFprobe, offers to install missing tools with Windows Package Manager when available, then starts CutFlow.
+
+Manual setup:
+
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -73,6 +83,8 @@ On Windows you can also use:
 ```powershell
 start.bat
 ```
+
+`start.bat` now runs the same setup checks, so either batch file is safe to use.
 
 ## Project Structure
 

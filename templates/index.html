@@ -14,8 +14,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="min-h-screen bg-neutral-950 text-neutral-100">
+  <a href="#content" class="skip-link">Skip to content</a>
   <header class="sticky top-0 z-50 w-full border-b border-white/10 bg-neutral-950/85 backdrop-blur">
-    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8" aria-label="Primary">
       <a class="flex items-center gap-x-3 text-xl font-bold tracking-tight text-white" href="{{ url_for('index') }}" aria-label="CutFlow">
         <span class="inline-flex size-10 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10.5 21 4"/><path d="m14.5 13.5 6.5 6.5"/><path d="M8 12h6"/><circle cx="5" cy="8" r="3"/><circle cx="5" cy="16" r="3"/></svg>
@@ -38,7 +39,7 @@
     </nav>
   </header>
 
-  <main>
+  <main id="content" tabindex="-1">
     <section class="relative overflow-hidden">
       <div class="absolute left-1/2 top-0 -z-10 size-[36rem] -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl"></div>
       <div class="mx-auto max-w-[85rem] px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -94,6 +95,6 @@
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
 </body>
 </html>

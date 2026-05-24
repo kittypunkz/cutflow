@@ -12,8 +12,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-page="compress" class="min-h-screen bg-neutral-950 text-neutral-100">
+  <a href="#content" class="skip-link">Skip to content</a>
   <header class="sticky top-0 z-50 w-full border-b border-white/10 bg-neutral-950/85 backdrop-blur">
-    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8" aria-label="Primary">
       <a class="flex items-center gap-x-3 text-xl font-bold text-white" href="{{ url_for('index') }}">
         <span class="inline-flex size-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="m14 10 6-6"/><path d="m10 14-6 6"/></svg>
@@ -27,13 +28,13 @@
       <div id="main-navbar" class="hs-collapse hidden grow basis-full overflow-hidden transition-all duration-300 sm:block">
         <div class="mt-5 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:items-center sm:justify-end sm:gap-1 sm:ps-5">
           <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white" href="{{ url_for('cut_video_page') }}">Cut Video</a>
-          <a class="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white" href="{{ url_for('compress_video_page') }}">Compress Video</a>
+          <a class="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white" href="{{ url_for('compress_video_page') }}" aria-current="page">Compress Video</a>
         </div>
       </div>
     </nav>
   </header>
 
-  <main class="mx-auto max-w-[85rem] px-4 py-8 sm:px-6 lg:px-8">
+  <main id="content" class="mx-auto max-w-[85rem] px-4 py-8 sm:px-6 lg:px-8" tabindex="-1">
     <section class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-emerald-500/15 via-neutral-900 to-neutral-950 p-6 shadow-2xl shadow-black/30 sm:p-10">
       <div class="grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-end">
         <div>
@@ -57,11 +58,11 @@
     <section class="mt-6 grid gap-3 sm:grid-cols-3">
       <div class="rounded-2xl border border-white/10 bg-neutral-900 p-4">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">FFmpeg</p>
-        <div id="ffmpeg-status" class="status-pill mt-2">Checking...</div>
+        <div id="ffmpeg-status" class="status-pill mt-2" role="status" aria-live="polite">Checking...</div>
       </div>
       <div class="rounded-2xl border border-white/10 bg-neutral-900 p-4">
         <p class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">Disk</p>
-        <div id="disk-status" class="status-pill mt-2">Checking...</div>
+        <div id="disk-status" class="status-pill mt-2" role="status" aria-live="polite">Checking...</div>
       </div>
       <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900 p-4">
         <button id="open-output-btn" class="inline-flex flex-1 items-center justify-center rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-400" type="button">Open Output</button>
@@ -69,31 +70,32 @@
       </div>
     </section>
 
-    <section class="mt-6 grid gap-4 md:grid-cols-4">
-      <div class="step is-active rounded-2xl border border-white/10 bg-neutral-900 p-4" data-step="upload">
+    <nav class="mt-6 grid gap-4 md:grid-cols-4" aria-label="Compress video progress">
+      <button type="button" class="step is-active rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="upload" aria-current="step">
         <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">1</span>
-        <h2 class="mt-3 font-semibold text-white">Upload</h2>
-        <p class="mt-1 text-sm text-neutral-400">Choose one video file.</p>
-      </div>
-      <div class="step rounded-2xl border border-white/10 bg-neutral-900 p-4" data-step="configure">
+        <span class="mt-3 block font-semibold text-white">Upload</span>
+        <span class="mt-1 block text-sm text-neutral-400">Choose one video file.</span>
+      </button>
+      <button type="button" class="step rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="option">
         <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">2</span>
-        <h2 class="mt-3 font-semibold text-white">Tune</h2>
-        <p class="mt-1 text-sm text-neutral-400">Pick compression settings.</p>
-      </div>
-      <div class="step rounded-2xl border border-white/10 bg-neutral-900 p-4" data-step="run">
+        <span class="mt-3 block font-semibold text-white">Tune</span>
+        <span class="mt-1 block text-sm text-neutral-400">Pick compression settings.</span>
+      </button>
+      <button type="button" class="step rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="process">
         <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">3</span>
-        <h2 class="mt-3 font-semibold text-white">Export</h2>
-        <p class="mt-1 text-sm text-neutral-400">Create smaller MP4.</p>
-      </div>
-      <div class="step rounded-2xl border border-white/10 bg-neutral-900 p-4" data-step="download">
+        <span class="mt-3 block font-semibold text-white">Export</span>
+        <span class="mt-1 block text-sm text-neutral-400">Create smaller MP4.</span>
+      </button>
+      <button type="button" class="step rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="finish">
         <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">4</span>
-        <h2 class="mt-3 font-semibold text-white">Download</h2>
-        <p class="mt-1 text-sm text-neutral-400">Open saved output.</p>
-      </div>
-    </section>
+        <span class="mt-3 block font-semibold text-white">Download</span>
+        <span class="mt-1 block text-sm text-neutral-400">Open saved output.</span>
+      </button>
+    </nav>
 
+    <section class="journey-panel is-active" data-journey-step="upload">
     <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <section class="rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+      <form id="upload-form" class="rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-2xl font-bold text-white">1. Upload video</h2>
@@ -103,14 +105,16 @@
         </div>
 
         <label class="upload-tile mt-5 block cursor-pointer rounded-3xl border-2 border-dashed border-white/15 bg-neutral-950/50 p-8 text-center transition hover:border-emerald-400/60 hover:bg-emerald-500/10">
-          <input type="file" id="file-upload" class="sr-only" accept="video/*">
+          <input type="file" id="file-upload" name="video" class="sr-only" accept="video/*" required aria-describedby="file-upload-help file-upload-error">
           <span class="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
             <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M20 20H4"/></svg>
           </span>
           <span class="mt-5 block text-lg font-semibold text-white">Drop video here or click to browse</span>
-          <span class="mt-2 block text-sm text-neutral-400">Your file stays local.</span>
+          <span id="file-upload-help" class="mt-2 block text-sm text-neutral-400">Your file stays local.</span>
         </label>
-        <div id="upload-status" class="status-banner mt-4"></div>
+        <p id="file-upload-error" class="field-error">Choose a video file before continuing.</p>
+        <div id="upload-status" class="status-banner mt-4" role="status" aria-live="polite" aria-atomic="true"></div>
+        <button class="sr-only" type="submit">Upload selected video</button>
 
         <div id="video-meta" class="mt-5 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <div class="grid gap-4 sm:grid-cols-3">
@@ -132,58 +136,65 @@
             </div>
           </div>
         </div>
-      </section>
+      </form>
 
       <aside class="rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
         <h2 class="text-xl font-bold text-white">Compression plan</h2>
         <p id="compress-summary" class="mt-3 text-sm leading-6 text-neutral-400">Upload a video and choose a quality target.</p>
       </aside>
     </div>
+    <div class="journey-actions">
+      <span></span>
+      <button class="primary" type="button" data-go-step="option">Continue to options</button>
+    </div>
+    </section>
 
-    <section class="mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+    <form id="compress-options-form" class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="option" action="{{ url_for('compress') }}" method="post" novalidate>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-2xl font-bold text-white">2. Compression settings</h2>
           <p class="mt-1 text-sm text-neutral-400">Start with a preset, then open advanced settings only when needed.</p>
         </div>
-        <button id="compress-btn" class="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-400 disabled:pointer-events-none disabled:opacity-50" type="button" disabled>Compress video</button>
+        <button id="compress-btn" class="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-400 disabled:pointer-events-none disabled:opacity-50" type="submit" disabled>Compress video</button>
       </div>
 
-      <div class="mt-5 grid gap-3 md:grid-cols-3">
-        <button type="button" class="preset-card is-selected rounded-2xl border border-white/10 bg-neutral-950/60 p-5 text-left hover:border-emerald-400/60" data-preset="balanced" data-crf="24" data-estimate-low="35" data-estimate-high="65">
+      <fieldset class="mt-5 grid gap-3 md:grid-cols-3">
+        <legend class="sr-only">Compression preset</legend>
+        <button type="button" class="preset-card is-selected rounded-2xl border border-white/10 bg-neutral-950/60 p-5 text-left hover:border-emerald-400/60" data-preset="balanced" data-crf="24" data-estimate-low="35" data-estimate-high="65" aria-pressed="true">
           <span class="font-semibold text-white">Balanced</span>
-          <p class="mt-2 text-sm text-neutral-400">Good size reduction with safe quality.</p>
+          <span class="mt-2 block text-sm text-neutral-400">Good size reduction with safe quality.</span>
         </button>
-        <button type="button" class="preset-card rounded-2xl border border-white/10 bg-neutral-950/60 p-5 text-left hover:border-emerald-400/60" data-preset="small" data-crf="30" data-estimate-low="20" data-estimate-high="45">
+        <button type="button" class="preset-card rounded-2xl border border-white/10 bg-neutral-950/60 p-5 text-left hover:border-emerald-400/60" data-preset="small" data-crf="30" data-estimate-low="20" data-estimate-high="45" aria-pressed="false">
           <span class="font-semibold text-white">Small file</span>
-          <p class="mt-2 text-sm text-neutral-400">More compression, lower file size.</p>
+          <span class="mt-2 block text-sm text-neutral-400">More compression, lower file size.</span>
         </button>
-        <button type="button" class="preset-card rounded-2xl border border-white/10 bg-neutral-950/60 p-5 text-left hover:border-emerald-400/60" data-preset="quality" data-crf="20" data-estimate-low="55" data-estimate-high="85">
+        <button type="button" class="preset-card rounded-2xl border border-white/10 bg-neutral-950/60 p-5 text-left hover:border-emerald-400/60" data-preset="quality" data-crf="20" data-estimate-low="55" data-estimate-high="85" aria-pressed="false">
           <span class="font-semibold text-white">High quality</span>
-          <p class="mt-2 text-sm text-neutral-400">Better visual quality, larger output.</p>
+          <span class="mt-2 block text-sm text-neutral-400">Better visual quality, larger output.</span>
         </button>
-      </div>
+      </fieldset>
 
       <div class="hs-accordion-group mt-5">
         <div class="hs-accordion rounded-2xl border border-white/10 bg-neutral-950/60" id="advanced-settings">
-          <button class="hs-accordion-toggle inline-flex w-full items-center justify-between gap-x-3 px-5 py-4 text-start font-semibold text-white hover:text-emerald-300" aria-controls="advanced-settings-collapse">
+          <button class="hs-accordion-toggle inline-flex w-full items-center justify-between gap-x-3 px-5 py-4 text-start font-semibold text-white hover:text-emerald-300" type="button" aria-controls="advanced-settings-collapse">
             Advanced compression controls
             <svg class="hs-accordion-active:-rotate-180 size-4 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
           </button>
-          <div id="advanced-settings-collapse" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="advanced-settings">
+          <div id="advanced-settings-collapse" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300">
             <div class="grid gap-5 border-t border-white/10 p-5 md:grid-cols-2">
               <div>
                 <label for="compress-level" class="block text-sm font-semibold text-white">Quality target (CRF)</label>
-                <input id="compress-level" class="mt-4 w-full accent-emerald-500" type="range" min="18" max="32" value="24">
+                <input id="compress-level" name="crf" class="mt-4 w-full accent-emerald-500" type="range" min="18" max="32" value="24" aria-describedby="compress-level-help">
                 <div class="mt-2 flex items-center justify-between text-sm text-neutral-400">
                   <span>Higher quality</span>
                   <span id="compress-level-value" class="font-semibold text-emerald-300">24</span>
                   <span>Smaller file</span>
                 </div>
+                <p id="compress-level-help" class="mt-2 text-sm text-neutral-500">Lower CRF keeps more detail. Higher CRF creates a smaller file.</p>
               </div>
               <div>
                 <label for="compress-resolution" class="block text-sm font-semibold text-white">Resize output</label>
-                <select id="compress-resolution" class="mt-3 block w-full rounded-xl border-white/10 bg-neutral-950 px-4 py-3 text-white focus:border-emerald-500 focus:ring-emerald-500">
+                <select id="compress-resolution" name="resolution" class="mt-3 block w-full rounded-xl border-white/10 bg-neutral-950 px-4 py-3 text-white focus:border-emerald-500 focus:ring-emerald-500">
                   <option value="original">Keep original resolution</option>
                   <option value="1080">Downscale to 1080p</option>
                   <option value="720">Downscale to 720p</option>
@@ -195,33 +206,65 @@
         </div>
       </div>
 
+      <div class="journey-actions">
+        <button class="secondary" type="button" data-go-step="upload">Back to upload</button>
+        <button class="primary" type="button" data-go-step="process">Open process screen</button>
+      </div>
+    </form>
+
+    <section class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="process">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-2xl font-bold text-white">3. Process export</h2>
+          <p class="mt-1 text-sm text-neutral-400">After you start compression from Options, this screen keeps the export status focused.</p>
+        </div>
+      </div>
       <div class="mt-5 rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
         <div class="flex items-center justify-between gap-3">
-          <span id="compress-progress-label" class="text-sm font-semibold text-neutral-300">Waiting to start</span>
+          <span id="compress-progress-label" class="text-sm font-semibold text-neutral-300" role="status" aria-live="polite">Waiting to start</span>
           <span id="compress-progress-percent" class="text-sm font-semibold text-emerald-300">0%</span>
         </div>
         <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-          <div id="compress-progress-bar" class="progress-bar h-full rounded-full bg-emerald-500"></div>
+          <progress id="compress-progress-bar" class="progress-meter is-emerald" max="100" value="0" aria-label="Compression progress">0%</progress>
         </div>
         <div id="compress-result" class="mt-4"></div>
       </div>
+      <div class="journey-actions">
+        <button class="secondary" type="button" data-go-step="option">Back to options</button>
+        <button class="primary" type="button" data-go-step="finish">View finish page</button>
+      </div>
     </section>
 
-    <section id="output-section" class="mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+    <section id="output-section" class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="finish">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-2xl font-bold text-white">3. Outputs</h2>
+        <h2 class="text-2xl font-bold text-white">4. Finish</h2>
         <button id="clear-btn" class="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Clear outputs</button>
       </div>
-      <div id="output-list" class="output-list mt-4"></div>
+      <div id="output-list" class="output-list mt-4" role="status" aria-live="polite"></div>
     </section>
 
-    <section class="mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+    <section class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="finish">
       <h2 class="text-2xl font-bold text-white">Recent jobs</h2>
-      <div id="history-list" class="history-list mt-4"></div>
+      <div id="history-list" class="history-list mt-4" role="status" aria-live="polite"></div>
+      <div class="journey-actions">
+        <button class="secondary" type="button" data-go-step="process">Back to process</button>
+        <button class="primary" type="button" data-go-step="upload">Start another video</button>
+      </div>
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+    <form method="dialog">
+      <h2 id="confirm-dialog-title">Confirm action</h2>
+      <p id="confirm-dialog-message">This action cannot be undone.</p>
+      <div class="confirm-dialog-actions">
+        <button id="confirm-cancel-btn" class="secondary" type="submit" value="cancel">Cancel</button>
+        <button id="confirm-ok-btn" class="danger" type="submit" value="confirm">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
+  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
