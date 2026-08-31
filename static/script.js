@@ -6,19 +6,8 @@ let activeJobId = null;
 let activeCompressJobId = null;
 let pollTimer = null;
 let compressPollTimer = null;
-let queuePollTimer = null;
-let seenTerminalJobs = new Set();
-let queueUserToggled = false;
 let selectedEstimateLow = 35;
 let selectedEstimateHigh = 65;
-
-const STEP_ALIASES = {
-  configure: "option",
-  run: "process",
-  download: "finish",
-};
-
-const STEP_ORDER = ["upload", "option", "process", "finish"];
 
 function $(id) {
   return document.getElementById(id);
@@ -94,37 +83,8 @@ function clearFieldError(id, fieldId = null) {
   if (field) field.removeAttribute("aria-invalid");
 }
 
-function normalizeStep(stepName) {
-  return STEP_ALIASES[stepName] || stepName || "upload";
-}
-
-function updateStep(stepName) {
-  const activeStep = normalizeStep(stepName);
-  const activeIndex = STEP_ORDER.indexOf(activeStep);
-  document.querySelectorAll(".step").forEach(step => {
-    const stepKey = normalizeStep(step.dataset.step);
-    const stepIndex = STEP_ORDER.indexOf(stepKey);
-    step.classList.toggle("is-active", stepKey === activeStep);
-    step.classList.toggle("is-done", activeIndex > -1 && stepIndex > -1 && stepIndex < activeIndex);
-    if (stepKey === activeStep) {
-      step.setAttribute("aria-current", "step");
-    } else {
-      step.removeAttribute("aria-current");
-    }
-  });
-}
-
-function goToJourneyStep(stepName, shouldUpdateHash = true) {
-  const activeStep = normalizeStep(stepName);
-  document.querySelectorAll(".journey-panel").forEach(panel => {
-    const isActive = normalizeStep(panel.dataset.journeyStep) === activeStep;
-    panel.classList.toggle("is-active", isActive);
-    panel.toggleAttribute("hidden", !isActive);
-  });
-  updateStep(activeStep);
-  if (shouldUpdateHash && window.location.hash !== `#${activeStep}`) {
-    history.replaceState(null, "", `#${activeStep}`);
-  }
+function setScreen(name) {
+  document.body.dataset.screen = name;
   window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
@@ -142,67 +102,16 @@ function stopCompressPolling() {
   }
 }
 
-function resetGeneratedState() {
-  generatedSlices = [];
-  renderSliceList();
-  if ($("cut-btn")) $("cut-btn").disabled = true;
-  if ($("plan-summary")) {
-    $("plan-summary").textContent = currentVideo
-      ? "Choose split mode, then click Generate Slices."
-      : "Upload a video first, then generate slices.";
-  }
-}
-
-function setVideoMeta(video, options = {}) {
+function setFileInfo(video) {
   currentVideo = video;
-  const box = $("video-meta");
-  if (!box) return;
-
-  if (!video) {
-    box.style.display = "none";
-    box.classList.add("hidden");
-    if ($("current-file-bar")) {
-      $("current-file-bar").style.display = "none";
-      $("current-file-bar").classList.add("hidden");
-    }
-    if ($("change-file-btn")) $("change-file-btn").classList.add("hidden");
-    if ($("generate-btn")) $("generate-btn").disabled = true;
-    if ($("compress-btn")) $("compress-btn").disabled = true;
-    resetGeneratedState();
-    updateCompressSummary();
-    if (!options.keepStep) goToJourneyStep("upload");
-    return;
-  }
-
-  box.style.display = "";
-  box.classList.remove("hidden");
-  $("meta-filename").textContent = video.file_name;
-  $("meta-duration").textContent = video.metadata.duration_display;
-  $("meta-size").textContent = formatBytes(video.metadata.size_bytes);
-  if ($("current-file-bar")) {
-    $("current-file-bar").style.display = "";
-    $("current-file-bar").classList.remove("hidden");
-    $("current-file-name").textContent = video.file_name;
-    $("current-file-duration").textContent = video.metadata.duration_display;
-    $("current-file-size").textContent = formatBytes(video.metadata.size_bytes);
-  }
-  if ($("change-file-btn")) $("change-file-btn").classList.remove("hidden");
-  if ($("generate-btn")) $("generate-btn").disabled = false;
-  if ($("compress-btn")) $("compress-btn").disabled = false;
-  resetGeneratedState();
-  updateCompressSummary();
-  goToJourneyStep("option");
+  if ($("file-info-name")) $("file-info-name").textContent = video.file_name;
+  if ($("file-info-duration")) $("file-info-duration").textContent = video.metadata.duration_display;
+  if ($("file-info-size")) $("file-info-size").textContent = formatBytes(video.metadata.size_bytes);
 }
 
 async function handleUpload(file) {
   clearFieldError("file-upload-error", "file-upload");
   setStatus("Uploading video...");
-  activeJobId = null;
-  activeCompressJobId = null;
-  if ($("cut-results")) $("cut-results").innerHTML = "";
-  setProgressState("Waiting to start.", "No active slice.", 0, 0);
-  setCompressProgressState("Waiting to start.", 0);
-  if ($("compress-result")) $("compress-result").textContent = "No compressed file yet.";
 
   const formData = new FormData();
   formData.append("video", file);
@@ -212,92 +121,46 @@ async function handleUpload(file) {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Upload failed");
 
-    setVideoMeta({
+    setFileInfo({
       saved_path: data.saved_path,
       file_name: data.file_name || file.name,
       metadata: data.metadata,
     });
-    setStatus(`Uploaded ${file.name}`, "ok");
+    generatedSlices = [];
+    activeJobId = null;
+    activeCompressJobId = null;
+    setStatus("");
+    updateCompressSummary();
+    setScreen("options");
   } catch (err) {
-    setVideoMeta(null);
     setStatus(`Upload failed: ${err.message}`, "err");
   }
 }
 
-function clearCurrentFormAfterQueue(nextStep = "process") {
-  const upload = $("file-upload");
-  if (upload) upload.value = "";
-  setVideoMeta(null, { keepStep: true });
-  setStatus("Added to background queue. You can upload another file now.", "ok");
-  if ($("cut-results")) $("cut-results").innerHTML = "";
-  if ($("compress-result")) $("compress-result").textContent = "No compressed file yet.";
-  goToJourneyStep(nextStep);
+function goToUpload() {
+  currentVideo = null;
+  generatedSlices = [];
+  activeJobId = null;
+  activeCompressJobId = null;
+  stopPolling();
+  stopCompressPolling();
+  if ($("file-upload")) $("file-upload").value = "";
+  setStatus("");
+  setScreen("upload");
+}
+
+function retryFromFailure() {
+  generatedSlices = [];
+  activeJobId = null;
+  activeCompressJobId = null;
+  setScreen("options");
 }
 
 function buildSliceName(index) {
   return `slice_${String(index).padStart(2, "0")}`;
 }
 
-function renderSliceList() {
-  const container = $("segments-container");
-  if (!container) return;
-
-  if (!generatedSlices.length) {
-    container.className = "segments-container empty-state";
-    container.textContent = "No slices generated yet.";
-    return;
-  }
-
-  container.className = "segments-container";
-  container.innerHTML = generatedSlices.map((slice, index) => `
-    <div class="segment-row">
-      <label>
-        <span>Slice name</span>
-        <input type="text" class="slice-name-input" name="slice_name_${index}" data-index="${index}" value="${escapeHtml(slice.name)}" required>
-      </label>
-      <label>
-        <span>Start</span>
-        <input type="text" name="slice_start_${index}" value="${escapeHtml(slice.start)}" readonly>
-      </label>
-      <label>
-        <span>End</span>
-        <input type="text" name="slice_end_${index}" value="${escapeHtml(slice.end)}" readonly>
-      </label>
-    </div>
-  `).join("");
-
-  container.querySelectorAll(".slice-name-input").forEach(input => {
-    input.addEventListener("input", event => {
-      const idx = Number.parseInt(event.target.dataset.index, 10);
-      generatedSlices[idx].name = event.target.value;
-    });
-  });
-}
-
-function updatePlanSummary() {
-  const summary = $("plan-summary");
-  if (!summary) return;
-  if (!currentVideo) {
-    summary.textContent = "Upload a video first, then generate slices.";
-    return;
-  }
-  if (!generatedSlices.length) {
-    summary.textContent = "Choose split mode, then click Generate Slices.";
-    return;
-  }
-  const first = generatedSlices[0];
-  const last = generatedSlices[generatedSlices.length - 1];
-  summary.textContent =
-    `${generatedSlices.length} slices generated from ${first.start} to ${last.end}. Rename slice names if needed.`;
-}
-
-function generateSlices() {
-  if (!currentVideo) {
-    showFieldError("file-upload-error", "Upload a video first.", "file-upload");
-    goToJourneyStep("upload");
-    return;
-  }
-
+function computeSlices() {
   const totalSeconds = Math.max(1, Math.floor(currentVideo.metadata.duration_seconds));
   const mode = document.querySelector("input[name='split-mode']:checked")?.value || "count";
   let count = Number.parseInt($("slice-count").value, 10);
@@ -308,37 +171,32 @@ function generateSlices() {
     const minutes = Number.parseInt($("slice-minutes").value, 10);
     if (!Number.isInteger(minutes) || minutes < 1) {
       showFieldError("slice-minutes-error", "Minutes per output file must be 1 or more.", "slice-minutes");
-      return;
+      return null;
     }
     count = Math.ceil(totalSeconds / (minutes * 60));
   }
 
   if (!Number.isInteger(count) || count < 1) {
     showFieldError("slice-count-error", "Number of output files must be 1 or more.", "slice-count");
-    return;
+    return null;
   }
   if (count > totalSeconds) {
     showFieldError("slice-count-error", `Number of output files cannot exceed video seconds (${totalSeconds}).`, "slice-count");
-    return;
+    return null;
   }
 
   const sliceLength = totalSeconds / count;
-  generatedSlices = [];
+  const slices = [];
   for (let index = 0; index < count; index += 1) {
     const startSeconds = index === 0 ? 0 : Math.round(sliceLength * index);
     const endSeconds = index === count - 1 ? totalSeconds : Math.round(sliceLength * (index + 1));
-    generatedSlices.push({
+    slices.push({
       name: buildSliceName(index + 1),
       start: secondsToTimecode(startSeconds),
       end: secondsToTimecode(endSeconds),
     });
   }
-
-  renderSliceList();
-  updatePlanSummary();
-  if ($("cut-btn")) $("cut-btn").disabled = false;
-  updateStep("option");
-  announce(`${generatedSlices.length} slices generated.`);
+  return slices;
 }
 
 function getCutPayload() {
@@ -362,13 +220,8 @@ function validateSliceNames() {
 function setProgressValue(element, percent) {
   if (!element) return;
   const value = Math.max(0, Math.min(100, Number(percent) || 0));
-  if (element.tagName === "PROGRESS") {
-    element.value = value;
-    element.textContent = `${value.toFixed(1)}%`;
-  } else {
-    element.style.width = `${value}%`;
-    element.setAttribute("aria-valuenow", String(Math.round(value)));
-  }
+  element.style.width = `${value}%`;
+  element.setAttribute("aria-valuenow", String(Math.round(value)));
 }
 
 function setProgressState(overallLabel, currentSliceName, overallPercent, slicePercent) {
@@ -402,18 +255,37 @@ function updateCompressSummary() {
     `Original ${formatBytes(currentVideo.metadata.size_bytes)}. Estimated output ${formatBytes(low)}-${formatBytes(high)} using CRF ${crf}.`;
 }
 
-function renderResults(results) {
-  const resultsDiv = $("cut-results");
-  if (!resultsDiv) return;
-  resultsDiv.innerHTML = "";
-  for (const result of results) {
-    const item = document.createElement("div");
-    item.className = `result-item ${result.success ? "success" : "error"}`;
-    item.innerHTML = result.success
-      ? `<span class="result-name">${result.name}</span><span class="result-detail">${result.output_file}</span>`
-      : `<span class="result-name">${result.name}</span><span class="result-detail">${(result.stderr || "Unknown error").slice(0, 220)}</span>`;
-    resultsDiv.appendChild(item);
-  }
+function renderResultList(items) {
+  const list = $("result-list");
+  if (!list) return;
+  list.innerHTML = items.map(item => item.success
+    ? `<div class="output-item"><span>${escapeHtml(item.name)}</span><a class="dl-btn" href="/download/${encodeURIComponent(item.output_file)}">Download</a></div>`
+    : `<div class="output-item"><span>${escapeHtml(item.name)}</span><span>${escapeHtml((item.detail || "Failed").slice(0, 180))}</span></div>`
+  ).join("");
+}
+
+function showResultSuccess(items, summary = "") {
+  if ($("result-summary")) $("result-summary").textContent = summary;
+  renderResultList(items);
+  if ($("result-success")) $("result-success").classList.remove("hidden");
+  if ($("result-failure")) $("result-failure").classList.add("hidden");
+  setScreen("result");
+}
+
+function showResultFailure(message) {
+  if ($("result-error-message")) $("result-error-message").textContent = message;
+  if ($("result-failure")) $("result-failure").classList.remove("hidden");
+  if ($("result-success")) $("result-success").classList.add("hidden");
+  setScreen("result");
+}
+
+function buildCutResultItems(results) {
+  return results.map(result => ({
+    name: result.name,
+    success: result.success,
+    output_file: result.output_file,
+    detail: result.stderr,
+  }));
 }
 
 async function pollJobStatus() {
@@ -432,50 +304,37 @@ async function pollJobStatus() {
       data.current_slice_percent || 0,
     );
 
-    if (data.status === "completed" || data.status === "failed") {
-      renderResults(data.results || []);
-      stopPolling();
+    if (data.status === "completed") {
       activeJobId = null;
-      $("cut-btn").disabled = false;
-      $("cut-btn").textContent = "Cut Video";
-      await refreshOutputList();
-      await refreshHistory();
-      goToJourneyStep("finish");
+      showResultSuccess(buildCutResultItems(data.results || []));
+      return;
+    }
+    if (data.status === "failed") {
+      activeJobId = null;
+      const failedResult = (data.results || []).find(result => !result.success);
+      showResultFailure((failedResult?.stderr || data.message || "Cut failed").slice(0, 240));
       return;
     }
     pollTimer = setTimeout(pollJobStatus, 800);
   } catch (err) {
-    setProgressState(`Progress error: ${err.message}`, "No active slice.", 0, 0);
-    stopPolling();
     activeJobId = null;
-    $("cut-btn").disabled = false;
-    $("cut-btn").textContent = "Cut Video";
+    stopPolling();
+    showResultFailure(err.message);
   }
 }
 
-async function handleCut() {
-  if (!currentVideo) {
-    showFieldError("file-upload-error", "Upload a video first.", "file-upload");
-    goToJourneyStep("upload");
-    return;
-  }
-  if (!generatedSlices.length) {
-    showFieldError("slice-count-error", "Generate slices first.", "slice-count");
-    goToJourneyStep("option");
-    return;
-  }
+async function handleCutSubmit() {
+  const slices = computeSlices();
+  if (!slices) return;
+  generatedSlices = slices;
   const validationError = validateSliceNames();
   if (validationError) {
     announce(validationError);
     return;
   }
 
-  const button = $("cut-btn");
-  button.disabled = true;
-  button.textContent = "Adding...";
-  $("cut-results").innerHTML = "";
+  setScreen("processing");
   setProgressState("Adding cut job to queue...", "Preparing slices...", 0, 0);
-  goToJourneyStep("process");
 
   try {
     const res = await fetch("/cut", {
@@ -486,32 +345,16 @@ async function handleCut() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Cut request failed");
     activeJobId = data.job_id;
-    button.disabled = false;
-    button.textContent = "Cut video";
-    setProgressState("Queued in background.", "Watch the export drawer.", 0, 0);
-    clearCurrentFormAfterQueue();
-    await refreshJobs();
+    pollJobStatus();
   } catch (err) {
-    button.disabled = false;
-    button.textContent = "Cut video";
-    setProgressState(`Request failed: ${err.message}`, "No active slice.", 0, 0);
+    showResultFailure(err.message);
   }
 }
 
-async function handleCompress() {
-  if (!currentVideo) {
-    showFieldError("file-upload-error", "Upload a video first.", "file-upload");
-    goToJourneyStep("upload");
-    return;
-  }
-
+async function handleCompressSubmit() {
   const crf = Number.parseInt($("compress-level").value, 10);
-  const button = $("compress-btn");
-  button.disabled = true;
-  button.textContent = "Adding...";
-  $("compress-result").textContent = "Preparing compression...";
+  setScreen("processing");
   setCompressProgressState("Adding compression job to queue...", 0);
-  goToJourneyStep("process");
 
   try {
     const res = await fetch("/compress", {
@@ -522,16 +365,9 @@ async function handleCompress() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Compress request failed");
     activeCompressJobId = data.job_id;
-    button.disabled = false;
-    button.textContent = "Compress video";
-    setCompressProgressState("Queued in background.", 0);
-    clearCurrentFormAfterQueue();
-    await refreshJobs();
+    pollCompressStatus();
   } catch (err) {
-    button.disabled = false;
-    button.textContent = "Compress video";
-    setCompressProgressState(`Request failed: ${err.message}`, 0);
-    $("compress-result").textContent = "Compression did not start.";
+    showResultFailure(err.message);
   }
 }
 
@@ -543,326 +379,26 @@ async function pollCompressStatus() {
     if (!res.ok || data.error) throw new Error(data.error || "Status request failed");
     setCompressProgressState(data.message || "Compressing...", data.progress_percent || 0);
 
-    if (data.status === "completed" || data.status === "failed") {
-      stopCompressPolling();
+    if (data.status === "completed") {
       activeCompressJobId = null;
-      $("compress-btn").disabled = false;
-      $("compress-btn").textContent = "Compress Video";
-      if (data.status === "completed" && data.result?.output_file) {
-        $("compress-result").textContent =
-          `${data.result.output_file} created. Original ${formatBytes(data.source_size_bytes)}, compressed ${formatBytes(data.output_size_bytes)}.`;
-      } else {
-        $("compress-result").textContent =
-          (data.result?.stderr || data.message || "Compression failed").slice(0, 240);
-      }
-      await refreshOutputList();
-      await refreshHistory();
-      goToJourneyStep("finish");
+      const outputFile = data.result?.output_file;
+      const summary = outputFile
+        ? `${outputFile} created. Original ${formatBytes(data.source_size_bytes)}, compressed ${formatBytes(data.output_size_bytes)}.`
+        : "";
+      showResultSuccess([{ name: outputFile || "output.mp4", success: true, output_file: outputFile }], summary);
+      return;
+    }
+    if (data.status === "failed") {
+      activeCompressJobId = null;
+      showResultFailure((data.result?.stderr || data.message || "Compression failed").slice(0, 240));
       return;
     }
     compressPollTimer = setTimeout(pollCompressStatus, 800);
   } catch (err) {
-    setCompressProgressState(`Progress error: ${err.message}`, 0);
-    stopCompressPolling();
     activeCompressJobId = null;
-    $("compress-btn").disabled = false;
-    $("compress-btn").textContent = "Compress Video";
+    stopCompressPolling();
+    showResultFailure(err.message);
   }
-}
-
-function ensureQueueDrawer() {
-  if ($("queue-drawer")) return;
-  const drawer = document.createElement("section");
-  drawer.id = "queue-drawer";
-  drawer.className = "queue-drawer";
-  drawer.innerHTML = `
-    <button id="queue-toggle" class="queue-header" type="button" aria-expanded="true" aria-controls="queue-body">
-      <span>
-        <strong>Background exports</strong>
-        <small id="queue-summary">No active jobs</small>
-      </span>
-      <span id="queue-chevron">v</span>
-    </button>
-    <div id="queue-body" class="queue-body">
-      <div id="queue-list" class="queue-list" role="status" aria-live="polite"></div>
-    </div>
-  `;
-  drawer.setAttribute("aria-label", "Background exports");
-  document.body.appendChild(drawer);
-  $("queue-toggle").addEventListener("click", () => {
-    queueUserToggled = true;
-    drawer.classList.toggle("is-collapsed");
-    const expanded = !drawer.classList.contains("is-collapsed");
-    $("queue-toggle").setAttribute("aria-expanded", String(expanded));
-    $("queue-chevron").textContent = expanded ? "v" : "^";
-  });
-}
-
-function jobStatusLabel(job) {
-  if (job.status === "running") return "Running";
-  if (job.status === "queued") return `Queued #${job.queue_position || 1}`;
-  if (job.status === "completed") return "Completed";
-  if (job.status === "failed") return "Failed";
-  return job.status || "Waiting";
-}
-
-function renderQueueJobs(jobs) {
-  ensureQueueDrawer();
-  const drawer = $("queue-drawer");
-  const list = $("queue-list");
-  const summary = $("queue-summary");
-  const visibleJobs = jobs.filter(job => ["running", "queued", "completed", "failed"].includes(job.status));
-  const activeCount = visibleJobs.filter(job => job.status === "running" || job.status === "queued").length;
-
-  drawer.classList.toggle("has-jobs", visibleJobs.length > 0);
-  if (activeCount > 0) {
-    queueUserToggled = false;
-    drawer.classList.remove("is-collapsed");
-  } else if (!queueUserToggled) {
-    drawer.classList.add("is-collapsed");
-  }
-  const expanded = !drawer.classList.contains("is-collapsed");
-  if ($("queue-toggle")) $("queue-toggle").setAttribute("aria-expanded", String(expanded));
-  if ($("queue-chevron")) $("queue-chevron").textContent = expanded ? "v" : "^";
-  summary.textContent = activeCount
-    ? `${activeCount} active or queued`
-    : visibleJobs.length
-      ? "All exports finished"
-      : "No active jobs";
-
-  if (!visibleJobs.length) {
-    list.innerHTML = `<div class="queue-empty">No background exports yet.</div>`;
-    return;
-  }
-
-  list.innerHTML = visibleJobs.map(job => {
-    const percent = Math.max(0, Math.min(100, Number(job.progress_percent || 0)));
-    const files = job.output_files || [];
-    const downloads = files.map(name =>
-      `<a href="/download/${encodeURIComponent(name)}">Download</a>`
-    ).join("");
-    const detail = job.status === "failed"
-      ? escapeHtml((job.result?.stderr || job.message || "Export failed").slice(0, 180))
-      : escapeHtml(job.message || "");
-    return `
-      <article class="queue-job is-${escapeHtml(job.status)}">
-        <div class="queue-job-top">
-          <div>
-            <strong>${escapeHtml(job.tool_label || (job.type === "compress" ? "Compress Video" : "Cut Video"))}</strong>
-            <span>${escapeHtml(job.source_file || "video")}</span>
-          </div>
-          <em>${jobStatusLabel(job)}</em>
-        </div>
-        <div class="queue-progress-track">
-          <div class="queue-progress-bar" style="width:${percent}%"></div>
-        </div>
-        <div class="queue-job-meta">
-          <span>${percent.toFixed(1)}%</span>
-          <span>${detail}</span>
-        </div>
-        ${files.length ? `<div class="queue-downloads">${downloads}</div>` : ""}
-      </article>
-    `;
-  }).join("");
-}
-
-async function refreshJobs() {
-  if (queuePollTimer) {
-    clearTimeout(queuePollTimer);
-    queuePollTimer = null;
-  }
-  try {
-    const res = await fetch("/jobs");
-    const jobs = await res.json();
-    if (!res.ok || jobs.error) throw new Error(jobs.error || "Job list failed");
-    renderQueueJobs(jobs);
-
-    let terminalChanged = false;
-    for (const job of jobs) {
-      if ((job.status === "completed" || job.status === "failed") && !seenTerminalJobs.has(job.job_id)) {
-        seenTerminalJobs.add(job.job_id);
-        terminalChanged = true;
-      }
-    }
-    if (terminalChanged) {
-      await refreshOutputList();
-      await refreshHistory();
-      if (normalizeStep(window.location.hash.slice(1)) === "process") {
-        goToJourneyStep("finish");
-      }
-    }
-
-    const hasActive = jobs.some(job => job.status === "running" || job.status === "queued");
-    queuePollTimer = setTimeout(refreshJobs, hasActive ? 1000 : 5000);
-  } catch (_) {
-    queuePollTimer = setTimeout(refreshJobs, 5000);
-  }
-}
-
-function bindJourneyNavigation() {
-  document.querySelectorAll(".step").forEach(step => {
-    step.addEventListener("click", () => {
-      const target = normalizeStep(step.dataset.step);
-      if (target === "option" && !currentVideo) {
-        showFieldError("file-upload-error", "Upload a video first.", "file-upload");
-        goToJourneyStep("upload");
-        return;
-      }
-      if (target === "process" && !currentVideo && !activeJobId && !activeCompressJobId) {
-        goToJourneyStep("process");
-        return;
-      }
-      goToJourneyStep(target);
-    });
-  });
-
-  document.querySelectorAll("[data-go-step]").forEach(button => {
-    button.addEventListener("click", () => {
-      const target = normalizeStep(button.dataset.goStep);
-      if (target === "option" && !currentVideo) {
-        showFieldError("file-upload-error", "Upload a video first.", "file-upload");
-        goToJourneyStep("upload");
-        return;
-      }
-      goToJourneyStep(target);
-    });
-  });
-
-  window.addEventListener("hashchange", () => {
-    const hashStep = normalizeStep(window.location.hash.slice(1));
-    goToJourneyStep(STEP_ORDER.includes(hashStep) ? hashStep : "upload", false);
-  });
-
-  const initialStep = normalizeStep(window.location.hash.slice(1));
-  goToJourneyStep(STEP_ORDER.includes(initialStep) ? initialStep : "upload", false);
-}
-
-async function refreshOutputList() {
-  const section = $("output-section");
-  const list = $("output-list");
-  if (!section || !list) return;
-  try {
-    const res = await fetch("/outputs");
-    const files = await res.json();
-    if (!files.length) {
-      section.style.display = "";
-      list.className = "output-list empty-state";
-      list.textContent = "No output files yet.";
-      return;
-    }
-    section.style.display = "";
-    list.className = "output-list";
-    list.innerHTML = files.map(file => `
-      <div class="output-item">
-        <span>${file.name}</span>
-        <strong>${formatBytes(file.size_bytes)}</strong>
-        <a class="dl-btn" href="/download/${encodeURIComponent(file.name)}">Download</a>
-      </div>
-    `).join("");
-  } catch (_) {}
-}
-
-async function refreshHistory() {
-  const list = $("history-list");
-  if (!list) return;
-  try {
-    const res = await fetch("/job-history");
-    const items = await res.json();
-    if (!items.length) {
-      list.className = "history-list empty-state";
-      list.textContent = "No completed jobs yet.";
-      return;
-    }
-    list.className = "history-list";
-    list.innerHTML = items.map(item => `
-      <div class="history-item">
-        <div>
-          <strong>${item.type === "compress" ? "Compressed" : "Cut"} ${item.source_file || "video"}</strong>
-          <span>${item.completed_at} - ${item.output_count || 0} output file(s)</span>
-        </div>
-        <div class="history-actions">
-          <span>${formatBytes(item.output_size_bytes || 0)}</span>
-          ${(item.output_files || []).map(name => `<a href="/download/${encodeURIComponent(name)}">Download</a>`).join("")}
-        </div>
-      </div>
-    `).join("");
-  } catch (_) {}
-}
-
-function confirmDialog(message, okLabel = "Delete") {
-  const dialog = $("confirm-dialog");
-  if (!dialog || typeof dialog.showModal !== "function") {
-    return Promise.resolve(window.confirm(message));
-  }
-  $("confirm-dialog-message").textContent = message;
-  $("confirm-ok-btn").textContent = okLabel;
-  dialog.returnValue = "";
-  dialog.showModal();
-  return new Promise(resolve => {
-    const onClose = () => {
-      dialog.removeEventListener("close", onClose);
-      resolve(dialog.returnValue === "confirm");
-    };
-    dialog.addEventListener("close", onClose);
-  });
-}
-
-async function handleClearOutputs() {
-  const confirmed = await confirmDialog("Delete all output files? This cannot be undone.", "Delete outputs");
-  if (!confirmed) return;
-  try {
-    const res = await fetch("/clear-outputs", { method: "POST" });
-    const data = await res.json();
-    await refreshOutputList();
-    if (data.skipped && data.skipped.length) {
-      announce(`Deleted ${data.deleted} file(s). ${data.skipped.length} file(s) were skipped because they are still in use.`);
-    }
-  } catch (err) {
-    announce(`Failed to delete: ${err.message}`);
-  }
-}
-
-async function clearUploads() {
-  const confirmed = await confirmDialog("Delete uploaded source files? Output files will stay.", "Delete uploads");
-  if (!confirmed) return;
-  try {
-    const res = await fetch("/clear-uploads", { method: "POST" });
-    const data = await res.json();
-    setStatus(`Deleted ${data.deleted} uploaded file(s).`, "ok");
-  } catch (err) {
-    setStatus(`Failed to clear uploads: ${err.message}`, "err");
-  }
-}
-
-async function openOutputFolder() {
-  try {
-    const res = await fetch("/open-output-folder", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || "Could not open output folder");
-  } catch (err) {
-    announce(`Failed to open folder: ${err.message}`);
-  }
-}
-
-async function refreshSystemStatus() {
-  try {
-    const res = await fetch("/system-status");
-    const data = await res.json();
-    if ($("ffmpeg-status")) {
-      $("ffmpeg-status").textContent = data.ffmpeg_ready ? "FFmpeg ready" : "FFmpeg missing";
-      $("ffmpeg-status").classList.toggle("is-ok", data.ffmpeg_ready);
-      $("ffmpeg-status").classList.toggle("is-bad", !data.ffmpeg_ready);
-    }
-    if ($("disk-status")) {
-      $("disk-status").textContent = `Disk free: ${formatBytes(data.disk_free_bytes)}`;
-      $("disk-status").classList.toggle("is-ok", data.output_writable);
-      $("disk-status").classList.toggle("is-bad", !data.output_writable);
-    }
-    if ($("output-path")) {
-      $("output-path").textContent = `Output: ${data.output_dir}`;
-      $("output-path").title = data.output_dir;
-    }
-  } catch (_) {}
 }
 
 function bindUploadDropzone() {
@@ -883,13 +419,6 @@ function bindUploadDropzone() {
     const file = event.dataTransfer.files[0];
     if (file) handleUpload(file);
   });
-}
-
-function bindLocalControls() {
-  if ($("change-file-btn")) $("change-file-btn").addEventListener("click", () => $("file-upload").click());
-  if ($("clear-uploads-btn")) $("clear-uploads-btn").addEventListener("click", clearUploads);
-  if ($("open-output-btn")) $("open-output-btn").addEventListener("click", openOutputFolder);
-  if ($("open-output-btn-secondary")) $("open-output-btn-secondary").addEventListener("click", openOutputFolder);
 }
 
 function bindSplitMode() {
@@ -929,35 +458,6 @@ function bindFormValidation() {
     });
   }
 
-  const uploadForm = $("upload-form");
-  if (uploadForm) {
-    uploadForm.addEventListener("submit", event => {
-      event.preventDefault();
-      const file = upload?.files?.[0];
-      if (!file) {
-        showFieldError("file-upload-error", "Choose a video file before uploading.", "file-upload");
-        return;
-      }
-      handleUpload(file);
-    });
-  }
-
-  const cutForm = $("cut-options-form");
-  if (cutForm) {
-    cutForm.addEventListener("submit", event => {
-      event.preventDefault();
-      generateSlices();
-    });
-  }
-
-  const compressForm = $("compress-options-form");
-  if (compressForm) {
-    compressForm.addEventListener("submit", event => {
-      event.preventDefault();
-      handleCompress();
-    });
-  }
-
   document.addEventListener("blur", event => {
     if (event.target.matches?.("input, select, textarea")) {
       event.target.toggleAttribute("aria-invalid", event.target.matches(":user-invalid"));
@@ -972,23 +472,17 @@ function bindFormValidation() {
 }
 
 function initShared() {
-  ensureQueueDrawer();
-  bindJourneyNavigation();
   bindUploadDropzone();
-  bindLocalControls();
   bindFormValidation();
-  if ($("clear-btn")) $("clear-btn").addEventListener("click", handleClearOutputs);
-  refreshSystemStatus();
-  refreshOutputList();
-  refreshHistory();
-  refreshJobs();
 }
 
 function initCutPage() {
   bindSplitMode();
-  $("cut-btn").addEventListener("click", handleCut);
+  $("cut-btn").addEventListener("click", handleCutSubmit);
+  $("cut-back-btn").addEventListener("click", goToUpload);
+  $("start-over-btn").addEventListener("click", goToUpload);
+  $("try-again-btn").addEventListener("click", retryFromFailure);
   setProgressState("Waiting to start.", "No active slice.", 0, 0);
-  renderSliceList();
 }
 
 function initCompressPage() {
@@ -998,6 +492,10 @@ function initCompressPage() {
     selectedEstimateHigh = 70;
     updateCompressSummary();
   });
+  $("compress-btn").addEventListener("click", handleCompressSubmit);
+  $("compress-back-btn").addEventListener("click", goToUpload);
+  $("start-over-btn").addEventListener("click", goToUpload);
+  $("try-again-btn").addEventListener("click", retryFromFailure);
   setCompressProgressState("Waiting to start.", 0);
   updateCompressSummary();
 }

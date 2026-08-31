@@ -11,10 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body data-page="cut" class="min-h-screen bg-neutral-950 text-neutral-100">
-  <a href="#content" class="skip-link">Skip to content</a>
+<body data-page="cut" data-screen="upload" class="min-h-screen bg-neutral-950 text-neutral-100">
   <header class="sticky top-0 z-50 w-full border-b border-white/10 bg-neutral-950/85 backdrop-blur">
-    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8" aria-label="Primary">
+    <nav class="mx-auto flex max-w-[85rem] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
       <a class="flex items-center gap-x-3 text-xl font-bold text-white" href="{{ url_for('index') }}">
         <span class="inline-flex size-10 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
           <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10.5 21 4"/><path d="m14.5 13.5 6.5 6.5"/><path d="M8 12h6"/><circle cx="5" cy="8" r="3"/><circle cx="5" cy="16" r="3"/></svg>
@@ -27,250 +26,117 @@
       </button>
       <div id="main-navbar" class="hs-collapse hidden grow basis-full overflow-hidden transition-all duration-300 sm:block">
         <div class="mt-5 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:items-center sm:justify-end sm:gap-1 sm:ps-5">
-          <a class="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white" href="{{ url_for('cut_video_page') }}" aria-current="page">Cut Video</a>
+          <a class="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white" href="{{ url_for('cut_video_page') }}">Cut Video</a>
           <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white" href="{{ url_for('compress_video_page') }}">Compress Video</a>
         </div>
       </div>
     </nav>
   </header>
 
-  <main id="content" class="mx-auto max-w-[85rem] px-4 py-8 sm:px-6 lg:px-8" tabindex="-1">
-    <section class="rounded-[2rem] border border-white/10 bg-gradient-to-br from-blue-500/15 via-neutral-900 to-neutral-950 p-6 shadow-2xl shadow-black/30 sm:p-10">
-      <div class="grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-end">
-        <div>
-          <a class="inline-flex items-center gap-x-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-white/10" href="{{ url_for('index') }}">
-            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-            All tools
-          </a>
-          <h1 class="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl">Cut video into exact local clips</h1>
-          <p class="mt-4 max-w-2xl text-neutral-300">Upload once, choose a split mode, review the generated plan, then export clips with FFmpeg on this machine.</p>
-        </div>
-        <div class="rounded-2xl border border-white/10 bg-neutral-950/70 p-5">
-          <div class="flex items-center justify-between gap-3">
-            <span class="text-sm font-semibold text-white">Current output</span>
-            <button id="open-output-btn-secondary" class="inline-flex items-center gap-x-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200 hover:bg-white/10" type="button">Open folder</button>
-          </div>
-          <p id="output-path" class="mt-3 break-all text-sm text-neutral-400">Loading output path...</p>
-        </div>
-      </div>
-    </section>
+  <main class="mx-auto max-w-[85rem] px-4 py-8 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-3xl">
+      <a class="inline-flex items-center gap-x-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-white/10" href="{{ url_for('index') }}">
+        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        All tools
+      </a>
+      <h1 class="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl">Cut video into exact local clips</h1>
+      <p class="mt-4 text-neutral-300">Upload once, choose a split mode, then export clips with FFmpeg on this machine.</p>
 
-    <section class="mt-6 grid gap-3 sm:grid-cols-3">
-      <div class="rounded-2xl border border-white/10 bg-neutral-900 p-4">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">FFmpeg</p>
-        <div id="ffmpeg-status" class="status-pill mt-2" role="status" aria-live="polite">Checking...</div>
-      </div>
-      <div class="rounded-2xl border border-white/10 bg-neutral-900 p-4">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">Disk</p>
-        <div id="disk-status" class="status-pill mt-2" role="status" aria-live="polite">Checking...</div>
-      </div>
-      <div class="flex items-center gap-3 rounded-2xl border border-white/10 bg-neutral-900 p-4">
-        <button id="open-output-btn" class="inline-flex flex-1 items-center justify-center rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400" type="button">Open Output</button>
-        <button id="clear-uploads-btn" class="inline-flex flex-1 items-center justify-center rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Clear Uploads</button>
-      </div>
-    </section>
-
-    <nav class="mt-6 grid gap-4 md:grid-cols-4" aria-label="Cut video progress">
-      <button type="button" class="step is-active rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="upload" aria-current="step">
-        <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">1</span>
-        <span class="mt-3 block font-semibold text-white">Upload</span>
-        <span class="mt-1 block text-sm text-neutral-400">Choose one video file.</span>
-      </button>
-      <button type="button" class="step rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="option">
-        <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">2</span>
-        <span class="mt-3 block font-semibold text-white">Plan</span>
-        <span class="mt-1 block text-sm text-neutral-400">Select split rules.</span>
-      </button>
-      <button type="button" class="step rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="process">
-        <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">3</span>
-        <span class="mt-3 block font-semibold text-white">Export</span>
-        <span class="mt-1 block text-sm text-neutral-400">Generate clips.</span>
-      </button>
-      <button type="button" class="step rounded-2xl border border-white/10 bg-neutral-900 p-4 text-left" data-step="finish">
-        <span class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold">4</span>
-        <span class="mt-3 block font-semibold text-white">Download</span>
-        <span class="mt-1 block text-sm text-neutral-400">Open saved outputs.</span>
-      </button>
-    </nav>
-
-    <section class="journey-panel is-active" data-journey-step="upload">
-    <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <form id="upload-form" class="rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-2xl font-bold text-white">1. Upload video</h2>
-            <p class="mt-1 text-sm text-neutral-400">MP4, MOV, AVI, MKV and common video files are supported by your FFmpeg install.</p>
-          </div>
-          <button id="change-file-btn" class="hidden rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Change file</button>
-        </div>
+      <section data-screen="upload" class="mt-8 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+        <h2 class="text-2xl font-bold text-white">Upload video</h2>
+        <p class="mt-1 text-sm text-neutral-400">MP4, MOV, AVI, MKV and common video files are supported by your FFmpeg install.</p>
 
         <label class="upload-tile mt-5 block cursor-pointer rounded-3xl border-2 border-dashed border-white/15 bg-neutral-950/50 p-8 text-center transition hover:border-blue-400/60 hover:bg-blue-500/10">
-          <input type="file" id="file-upload" name="video" class="sr-only" accept="video/*" required aria-describedby="file-upload-help file-upload-error">
+          <input type="file" id="file-upload" class="sr-only" accept="video/*">
           <span class="mx-auto inline-flex size-16 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-300">
             <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M20 20H4"/></svg>
           </span>
           <span class="mt-5 block text-lg font-semibold text-white">Drop video here or click to browse</span>
-          <span id="file-upload-help" class="mt-2 block text-sm text-neutral-400">Your file is stored locally in the project upload folder.</span>
+          <span class="mt-2 block text-sm text-neutral-400">Your file is stored locally in the project upload folder.</span>
         </label>
-        <p id="file-upload-error" class="field-error">Choose a video file before continuing.</p>
-        <div id="upload-status" class="status-banner mt-4" role="status" aria-live="polite" aria-atomic="true"></div>
-        <button class="sr-only" type="submit">Upload selected video</button>
+        <p id="file-upload-error" class="field-error"></p>
+        <div id="upload-status" class="status-banner mt-4"></div>
+      </section>
 
-        <div id="video-meta" class="mt-5 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <div class="grid gap-4 sm:grid-cols-3">
-            <div><p class="text-xs uppercase tracking-[0.18em] text-neutral-500">File</p><p id="meta-filename" class="mt-1 truncate font-semibold text-white">-</p></div>
-            <div><p class="text-xs uppercase tracking-[0.18em] text-neutral-500">Duration</p><p id="meta-duration" class="mt-1 font-semibold text-white">-</p></div>
-            <div><p class="text-xs uppercase tracking-[0.18em] text-neutral-500">Size</p><p id="meta-size" class="mt-1 font-semibold text-white">-</p></div>
+      <section data-screen="options" class="mt-8 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+        <p id="file-info-line" class="text-sm text-neutral-300">
+          <span id="file-info-name" class="font-semibold text-white">-</span>
+          <span class="mx-2 text-neutral-600">&bull;</span>
+          <span id="file-info-duration">-</span>
+          <span class="mx-2 text-neutral-600">&bull;</span>
+          <span id="file-info-size">-</span>
+        </p>
+
+        <h2 class="mt-5 text-2xl font-bold text-white">Choose split mode</h2>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4 hover:border-blue-400/60">
+            <input class="split-mode-radio me-2" type="radio" name="split-mode" value="count" checked>
+            <span class="font-semibold text-white">By number of files</span>
+            <p class="mt-2 text-sm text-neutral-400">Choose exactly how many clips you want.</p>
+          </label>
+          <label class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4 hover:border-blue-400/60">
+            <input class="split-mode-radio me-2" type="radio" name="split-mode" value="duration">
+            <span class="font-semibold text-white">By minutes</span>
+            <p class="mt-2 text-sm text-neutral-400">Generate clips with a target duration.</p>
+          </label>
+        </div>
+
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div id="count-split-panel" class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
+            <label for="slice-count" class="block text-sm font-semibold text-white">Number of output files</label>
+            <input id="slice-count" class="mt-3 block w-full rounded-xl border-white/10 bg-neutral-950 px-4 py-3 text-white focus:border-blue-500 focus:ring-blue-500" type="number" min="1" max="100" value="2">
+            <p id="slice-count-error" class="field-error"></p>
+          </div>
+          <div id="duration-split-panel" class="hidden rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
+            <label for="slice-minutes" class="block text-sm font-semibold text-white">Minutes per file</label>
+            <input id="slice-minutes" class="mt-3 block w-full rounded-xl border-white/10 bg-neutral-950 px-4 py-3 text-white focus:border-blue-500 focus:ring-blue-500" type="number" min="1" max="240" value="10">
+            <p id="slice-minutes-error" class="field-error"></p>
           </div>
         </div>
 
-        <div id="current-file-bar" class="mt-5 hidden rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p class="text-sm font-semibold text-blue-100">Ready to cut</p>
-              <p id="current-file-name" class="mt-1 text-sm text-neutral-300">-</p>
-            </div>
-            <div class="flex gap-3 text-sm text-neutral-300">
-              <span id="current-file-duration">-</span>
-              <span id="current-file-size">-</span>
-            </div>
+        <div class="mt-6 flex flex-wrap justify-between gap-3">
+          <button id="cut-back-btn" class="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Back</button>
+          <button id="cut-btn" class="rounded-xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400" type="button">Cut video</button>
+        </div>
+      </section>
+
+      <section data-screen="processing" class="mt-8 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+        <h2 class="text-2xl font-bold text-white">Cutting video&hellip;</h2>
+        <div class="mt-5 rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <span id="progress-label" class="text-sm font-semibold text-neutral-300">Waiting to start</span>
+            <span id="progress-percent" class="text-sm font-semibold text-blue-300">0%</span>
+          </div>
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+            <div id="progress-bar" class="progress-bar h-full rounded-full bg-blue-500"></div>
+          </div>
+          <div class="mt-4 flex items-center justify-between gap-3 text-sm">
+            <span id="current-slice-name" class="font-semibold text-neutral-300">No active slice.</span>
+            <span id="slice-progress-percent" class="font-semibold text-blue-300">0%</span>
+          </div>
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+            <div id="slice-progress-bar" class="progress-bar h-full rounded-full bg-blue-400"></div>
           </div>
         </div>
-      </form>
+      </section>
 
-      <aside class="rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
-        <h2 class="text-xl font-bold text-white">Cut plan</h2>
-        <p id="plan-summary" class="mt-3 text-sm leading-6 text-neutral-400">Upload a video to prepare split options.</p>
-        <div class="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
-          <div id="slice-progress" class="slice-progress h-full rounded-full bg-blue-500"></div>
+      <section data-screen="result" class="mt-8 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6">
+        <div id="result-success">
+          <h2 class="text-2xl font-bold text-white">Clips ready</h2>
+          <p id="result-summary" class="mt-2 text-sm text-neutral-400"></p>
+          <div id="result-list" class="output-list mt-4"></div>
+          <button id="start-over-btn" class="mt-6 rounded-xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400" type="button">Start over</button>
         </div>
-      </aside>
+        <div id="result-failure" class="hidden">
+          <h2 class="text-2xl font-bold text-white">Cut failed</h2>
+          <p id="result-error-message" class="mt-3 text-sm text-neutral-300"></p>
+          <button id="try-again-btn" class="mt-6 rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Try again</button>
+        </div>
+      </section>
     </div>
-    <div class="journey-actions">
-      <span></span>
-      <button class="primary" type="button" data-go-step="option">Continue to options</button>
-    </div>
-    </section>
-
-    <form id="cut-options-form" class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="option" action="{{ url_for('cut') }}" method="post" novalidate>
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-2xl font-bold text-white">2. Choose split mode</h2>
-          <p class="mt-1 text-sm text-neutral-400">Use count, duration, or manual segments depending on the job.</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <button id="generate-btn" class="inline-flex items-center justify-center rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="submit">Generate slices</button>
-          <button id="cut-btn" class="inline-flex items-center justify-center rounded-xl bg-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-400 disabled:pointer-events-none disabled:opacity-50" type="button" disabled>Cut video</button>
-        </div>
-      </div>
-
-      <fieldset class="mt-5 grid gap-3 md:grid-cols-3">
-        <legend class="sr-only">Split mode</legend>
-        <label class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4 hover:border-blue-400/60">
-          <input class="split-mode-radio me-2" type="radio" name="split-mode" value="count" checked>
-          <span class="font-semibold text-white">By number of files</span>
-          <span class="mt-2 block text-sm text-neutral-400">Choose exactly how many clips you want.</span>
-        </label>
-        <label class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4 hover:border-blue-400/60">
-          <input class="split-mode-radio me-2" type="radio" name="split-mode" value="duration">
-          <span class="font-semibold text-white">By minutes</span>
-          <span class="mt-2 block text-sm text-neutral-400">Generate clips with a target duration.</span>
-        </label>
-        <label class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4 hover:border-blue-400/60">
-          <input class="split-mode-radio me-2" type="radio" name="split-mode" value="custom">
-          <span class="font-semibold text-white">Custom segments</span>
-          <span class="mt-2 block text-sm text-neutral-400">Manually define start and end timestamps.</span>
-        </label>
-      </fieldset>
-
-      <div class="mt-5 grid gap-4 md:grid-cols-2">
-        <div id="count-split-panel" class="rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
-          <label for="slice-count" class="block text-sm font-semibold text-white">Number of output files</label>
-          <input id="slice-count" name="slice_count" class="mt-3 block w-full rounded-xl border-white/10 bg-neutral-950 px-4 py-3 text-white focus:border-blue-500 focus:ring-blue-500" type="number" min="1" max="100" value="2" inputmode="numeric" aria-describedby="slice-count-error">
-          <p id="slice-count-error" class="field-error">Enter a whole number from 1 to 100.</p>
-        </div>
-        <div id="duration-split-panel" class="hidden rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
-          <label for="slice-minutes" class="block text-sm font-semibold text-white">Minutes per file</label>
-          <input id="slice-minutes" name="slice_minutes" class="mt-3 block w-full rounded-xl border-white/10 bg-neutral-950 px-4 py-3 text-white focus:border-blue-500 focus:ring-blue-500" type="number" min="1" max="240" value="10" inputmode="numeric" aria-describedby="slice-minutes-error">
-          <p id="slice-minutes-error" class="field-error">Enter minutes from 1 to 240.</p>
-        </div>
-      </div>
-
-      <div class="mt-5">
-        <div class="flex items-center justify-between">
-          <h3 class="font-semibold text-white">Segments</h3>
-          <button id="add-segment" class="rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Add segment</button>
-        </div>
-        <div id="segments-container" class="segments-container mt-3"></div>
-      </div>
-
-      <div class="journey-actions">
-        <button class="secondary" type="button" data-go-step="upload">Back to upload</button>
-        <button class="primary" type="button" data-go-step="process">Open process screen</button>
-      </div>
-    </form>
-
-    <section class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="process">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-2xl font-bold text-white">3. Process export</h2>
-          <p class="mt-1 text-sm text-neutral-400">After you start the cut job from Options, this screen keeps the export status focused.</p>
-        </div>
-        <button id="cut-btn-secondary" class="hidden" type="button">Cut video</button>
-      </div>
-      <div class="mt-5 rounded-2xl border border-white/10 bg-neutral-950/60 p-4">
-        <div class="flex items-center justify-between gap-3">
-          <span id="progress-label" class="text-sm font-semibold text-neutral-300" role="status" aria-live="polite">Waiting to start</span>
-          <span id="progress-percent" class="text-sm font-semibold text-blue-300">0%</span>
-        </div>
-        <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-          <progress id="progress-bar" class="progress-meter is-blue" max="100" value="0" aria-label="Overall cut progress">0%</progress>
-        </div>
-        <div class="mt-4 flex items-center justify-between gap-3 text-sm">
-          <span id="current-slice-name" class="font-semibold text-neutral-300" role="status" aria-live="polite">No active slice.</span>
-          <span id="slice-progress-percent" class="font-semibold text-blue-300">0%</span>
-        </div>
-        <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-          <progress id="slice-progress-bar" class="progress-meter is-blue" max="100" value="0" aria-label="Current slice progress">0%</progress>
-        </div>
-        <div id="cut-results" class="mt-4 grid gap-3"></div>
-      </div>
-      <div class="journey-actions">
-        <button class="secondary" type="button" data-go-step="option">Back to options</button>
-        <button class="primary" type="button" data-go-step="finish">View finish page</button>
-      </div>
-    </section>
-
-    <section id="output-section" class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="finish">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-2xl font-bold text-white">4. Finish</h2>
-        <button id="clear-btn" class="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-neutral-200 hover:bg-white/10" type="button">Clear outputs</button>
-      </div>
-      <div id="output-list" class="output-list mt-4" role="status" aria-live="polite"></div>
-    </section>
-
-    <section class="journey-panel mt-6 rounded-3xl border border-white/10 bg-neutral-900 p-5 sm:p-6" data-journey-step="finish">
-      <h2 class="text-2xl font-bold text-white">Recent jobs</h2>
-      <div id="history-list" class="history-list mt-4" role="status" aria-live="polite"></div>
-      <div class="journey-actions">
-        <button class="secondary" type="button" data-go-step="process">Back to process</button>
-        <button class="primary" type="button" data-go-step="upload">Start another video</button>
-      </div>
-    </section>
   </main>
 
-  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
-    <form method="dialog">
-      <h2 id="confirm-dialog-title">Confirm action</h2>
-      <p id="confirm-dialog-message">This action cannot be undone.</p>
-      <div class="confirm-dialog-actions">
-        <button id="confirm-cancel-btn" class="secondary" type="submit" value="cancel">Cancel</button>
-        <button id="confirm-ok-btn" class="danger" type="submit" value="confirm">Delete</button>
-      </div>
-    </form>
-  </dialog>
-
-  <script defer src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
-  <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/preline@3.2.3/dist/preline.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

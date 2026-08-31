@@ -33,7 +33,6 @@
         <div class="mt-5 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:items-center sm:justify-end sm:gap-1 sm:ps-5">
           <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white" href="{{ url_for('cut_video_page') }}">Cut Video</a>
           <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white" href="{{ url_for('compress_video_page') }}">Compress Video</a>
-          <a class="rounded-lg px-3 py-2 text-sm font-medium text-neutral-400 hover:bg-white/10 hover:text-white" href="#local">Local-first</a>
         </div>
       </div>
     </nav>
@@ -55,7 +54,7 @@
               <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10.5 21 4"/><path d="m14.5 13.5 6.5 6.5"/><path d="M8 12h6"/><circle cx="5" cy="8" r="3"/><circle cx="5" cy="16" r="3"/></svg>
             </span>
             <h2 class="mt-8 text-2xl font-bold text-white">Cut Video</h2>
-            <p class="mt-3 text-sm leading-6 text-neutral-400">Split one video by number of files, duration, or custom segments. Designed for predictable local batches.</p>
+            <p class="mt-3 text-sm leading-6 text-neutral-400">Split one video by number of files or by minutes. Designed for predictable local batches.</p>
             <div class="mt-auto flex items-center gap-x-2 pt-8 text-sm font-semibold text-blue-300">
               Open cutter
               <svg class="size-4 transition group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -73,23 +72,6 @@
               <svg class="size-4 transition group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
           </a>
-        </div>
-      </div>
-    </section>
-
-    <section id="local" class="border-t border-white/10 bg-neutral-950/70">
-      <div class="mx-auto grid max-w-[85rem] gap-4 px-4 py-10 sm:grid-cols-3 sm:px-6 lg:px-8">
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h3 class="font-semibold text-white">Local files stay local</h3>
-          <p class="mt-2 text-sm text-neutral-400">Uploads and outputs are written to local folders in this project.</p>
-        </div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h3 class="font-semibold text-white">FFmpeg powered</h3>
-          <p class="mt-2 text-sm text-neutral-400">The app uses your local FFmpeg install for actual media processing.</p>
-        </div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <h3 class="font-semibold text-white">Separate tool pages</h3>
-          <p class="mt-2 text-sm text-neutral-400">Each tool has its own focused workflow instead of one overloaded page.</p>
         </div>
       </div>
     </section>
